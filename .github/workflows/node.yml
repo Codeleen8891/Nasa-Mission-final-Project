@@ -83,5 +83,5 @@ jobs:
           }
 
       # Run tests
-      - name: Run tests
+      - name: Run test
         run: npm test
