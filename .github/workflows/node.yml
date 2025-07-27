@@ -10,17 +10,23 @@ jobs:
   build:
     env:
       CI: true # disable watch mode, we can set a port number here as well
+      MONGO_URL: mongodb://localhost/nasa
     strategy:
       matrix:
         node-version: [14.x, 16.x] # we can run our workflow on two diferent node version and this will run in parallel making the build job two
+        mongodb-version: ["4.4"]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-
       - name: Use Node.js ${{matrix.node-version}}
         uses: actions/setup-node@v2
         with:
           node-version: ${{matrix.node-version}}
+
+      - name: Use MongoDB from Github actions
+        uses: supercharge/mongodb-github-ations@1.6.0
+        with:
+          mongodb-version: ${{matrix.mongodb-version}}
 
       # Install server dependencies
       - name: Install server dependencies
