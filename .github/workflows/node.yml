@@ -23,10 +23,16 @@ jobs:
         with:
           node-version: ${{matrix.node-version}}
 
-      - name: Use MongoDB from Github actions
-        uses: supercharge/mongodb-github-action@1.9.0
-        with:
-          mongodb-version: ${{matrix.mongodb-version}}
+      # Install MongoDB manually on Windows
+      - name: Install MongoDB
+        run: |
+          choco install mongodb --params "/InstallDir:C:\mongodb" -y
+          mkdir C:\data\db
+
+      # Start MongoDB
+      - name: Start MongoDB
+        run: |
+          Start-Process -FilePath "C:\mongodb\bin\mongod.exe" -ArgumentList "--dbpath C:\data\db" -NoNewWindow
 
       # Install server dependencies
       - name: Install server dependencies
