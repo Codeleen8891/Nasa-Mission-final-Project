@@ -8,31 +8,52 @@ on:
 
 jobs:
   build:
-    env:
-      CI: true # disable watch mode, we can set a port number here as well
-      MONGO_URL: mongodb://localhost/nasa
+    runs-on: windows-latest
     strategy:
       matrix:
-        node-version: [14.x, 16.x] # we can run our workflow on two diferent node version and this will run in parallel making the build job two
-        mongodb-version: ["4.4"]
-    runs-on: windows-latest
+        node-version: [14.x, 16.x]
+
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js ${{matrix.node-version}}
+
+      # Set up Node.js
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
-          node-version: ${{matrix.node-version}}
+          node-version: ${{ matrix.node-version }}
 
-      # Install MongoDB manually on Windows
+      # Install MongoDB
       - name: Install MongoDB
         run: |
-          choco install mongodb --params "/InstallDir:C:\mongodb" -y
+          choco install mongodb --params "/InstallDir=C:\MongoDB" -y
           mkdir C:\data\db
 
       # Start MongoDB
       - name: Start MongoDB
         run: |
-          Start-Process -FilePath "C:\mongodb\bin\mongod.exe" -ArgumentList "--dbpath C:\data\db" -NoNewWindow
+          $mongod = (Get-ChildItem -Path "C:\MongoDB" -Recurse -Filter mongod.exe | Select-Object -First 1).FullName
+          Write-Output "Starting MongoDB from $mongod"
+          Start-Process -FilePath $mongod -ArgumentList "--dbpath C:\data\db --bind_ip 127.0.0.1" -NoNewWindow
+          echo "MongoDB started in the background."
+
+      # Wait for MongoDB to be ready
+      - name: Wait for MongoDB
+        shell: pwsh
+        run: |
+          $retries = 10
+          $delay = 3
+          for ($i=0; $i -lt $retries; $i++) {
+            try {
+              & "C:\MongoDB\bin\mongo.exe" --eval "db.stats()" | Out-Null
+              Write-Host "MongoDB is ready!"
+              exit 0
+            } catch {
+              Write-Host "Waiting for MongoDB... ($($i+1)/$retries)"
+              Start-Sleep -Seconds $delay
+            }
+          }
+          Write-Error "MongoDB did not start in time."
+          exit 1
 
       # Install server dependencies
       - name: Install server dependencies
@@ -60,5 +81,7 @@ jobs:
           if (Test-Path "client/package.json") {
             npm run build --prefix client
           }
-      - name: npm Test
+
+      # Run tests
+      - name: Run tests
         run: npm test
