@@ -8,14 +8,19 @@ on:
 
 jobs:
   build:
+    env:
+      CI: true # disable watch mode, we can set a port number here as well
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x] # we can run our workflow on two diferent node version and this will run in parallel making the build job two
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
 
-      - name: Use Node.js version 16
+      - name: Use Node.js ${{matrix.node-version}}
         uses: actions/setup-node@v2
         with:
-          node-version: "16"
+          node-version: ${{matrix.node-version}}
 
       # Install server dependencies
       - name: Install server dependencies
@@ -43,3 +48,5 @@ jobs:
           if (Test-Path "client/package.json") {
             npm run build --prefix client
           }
+      - name: npm Test
+        run: npm test
